@@ -67,6 +67,20 @@ enum class ToolCapabilityStatus {
     VERIFIED
 }
 
+enum class IntegrationType(val label: String, val badgeColor: Long) {
+    REST_API("REST API", 0xFF00F0FF),
+    LOCAL_ENGINE("Local Engine", 0xFF00FF9D),
+    WEBVIEW_BRIDGE("WebView Bridge", 0xFFFFB800),
+    SDK("Native SDK", 0xFFB388FF)
+}
+
+enum class RuntimeHealthStatus(val label: String, val color: Long) {
+    HEALTHY_ONLINE("Online & Verified", 0xFF00FF9D),
+    DEGRADED_LATENCY("Degraded Latency", 0xFFFFB800),
+    OFFLINE("Offline", 0xFFFF5376),
+    UNCHECKED("Unchecked", 0xFF8A99A8)
+}
+
 enum class AgentRoleType {
     SUPREME_ORCHESTRATOR,
     STRATEGY_DIRECTOR,
@@ -107,7 +121,41 @@ data class FreeTool(
     val freeTierType: String,
     val capabilities: List<String>,
     val openSource: Boolean = false,
-    val status: ToolCapabilityStatus = ToolCapabilityStatus.VERIFIED
+    val status: ToolCapabilityStatus = ToolCapabilityStatus.VERIFIED,
+    val integrationType: IntegrationType = IntegrationType.REST_API,
+    val adapterId: String = "default_adapter",
+    val supportedOperations: List<String> = emptyList(),
+    val authenticationRequired: Boolean = false,
+    val rateLimitPolicy: String = "Free Anonymous Tier",
+    val inputSchema: String = "{}",
+    val outputSchema: String = "{}",
+    val healthStatus: RuntimeHealthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+    val requiredCapabilities: List<String> = emptyList()
+)
+
+data class ToolExecutionResponse(
+    val success: Boolean,
+    val statusCode: Int = 200,
+    val latencyMs: Long = 0L,
+    val outputData: String = "",
+    val artifactType: String = "text/plain",
+    val artifactTitle: String = "",
+    val artifactPreviewUrl: String? = null,
+    val rawResponseHeaders: Map<String, String> = emptyMap(),
+    val errorMessage: String? = null,
+    val isFallback: Boolean = false,
+    val executionEngine: String = "OkHttp Engine",
+    val verifiedChecksum: String = ""
+)
+
+data class ArtifactValidationResult(
+    val isValid: Boolean,
+    val sha256Checksum: String,
+    val byteSize: Int,
+    val schemaValid: Boolean,
+    val passedChecks: List<String>,
+    val qualityScore: Int,
+    val validationNotes: String
 )
 
 data class AgentLogEntry(
@@ -130,7 +178,10 @@ data class OutcomeVerificationResult(
     val qualityScorePercent: Int = 100,
     val verifiedBy: String = "Quality Director",
     val auditSummary: String = "",
-    val passedChecks: List<String> = emptyList()
+    val passedChecks: List<String> = emptyList(),
+    val validationResults: List<ArtifactValidationResult> = emptyList(),
+    val totalArtifactsValidated: Int = 0,
+    val averageChecksum: String = ""
 )
 
 data class ApprovalGate(
@@ -161,7 +212,9 @@ data class AgentHelper(
     val outputArtifactTitle: String = "",
     val outputArtifactPreviewUrl: String? = null,
     val outputArtifactData: String = "",
-    val executionTimeMs: Long = 0L
+    val executionTimeMs: Long = 0L,
+    val executionResponse: ToolExecutionResponse? = null,
+    val validationResult: ArtifactValidationResult? = null
 )
 
 data class WorkflowPipeline(

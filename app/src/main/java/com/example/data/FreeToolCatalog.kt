@@ -1,7 +1,9 @@
 package com.example.data
 
 import com.example.model.FreeTool
+import com.example.model.IntegrationType
 import com.example.model.OperatingDivision
+import com.example.model.RuntimeHealthStatus
 import com.example.model.ToolCapabilityStatus
 
 object FreeToolCatalog {
@@ -17,7 +19,16 @@ object FreeToolCatalog {
             description = "AI-powered research intelligence querying 200M+ peer-reviewed papers, citations, and evidence graphs.",
             freeTierType = "Free Academic API (100 req/min)",
             capabilities = listOf("Citation indexing", "TLDR extraction", "Evidence synthesis", "Author network"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "semantic_scholar_adapter",
+            supportedOperations = listOf("paper_search", "citation_graph", "tldr_extraction"),
+            authenticationRequired = false,
+            rateLimitPolicy = "100 requests / minute anonymous",
+            inputSchema = "{ \"query\": \"string\", \"limit\": 5 }",
+            outputSchema = "{ \"total\": 1, \"data\": [{ \"title\": \"string\", \"citationCount\": 0 }] }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("citation indexing", "evidence synthesis")
         ),
         FreeTool(
             id = "wayback_machine",
@@ -29,7 +40,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Public API",
             capabilities = listOf("Snapshot diffs", "Historical capture", "Temporal search", "Archive lookup"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "wayback_adapter",
+            supportedOperations = listOf("snapshot_lookup", "temporal_diff", "historical_archive"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Public Invocations",
+            inputSchema = "{ \"url\": \"string\" }",
+            outputSchema = "{ \"archived_snapshots\": { \"closest\": { \"available\": true, \"url\": \"string\" } } }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("archive lookup", "temporal search")
         ),
         FreeTool(
             id = "wikidata_sparql",
@@ -41,7 +61,16 @@ object FreeToolCatalog {
             freeTierType = "Open Non-Profit SPARQL",
             capabilities = listOf("Graph queries", "Entity disambiguation", "Fact verification", "JSON SPARQL"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "generic_rest_adapter",
+            supportedOperations = listOf("sparql_query", "entity_disambiguation", "knowledge_graph"),
+            authenticationRequired = false,
+            rateLimitPolicy = "5 concurrent SPARQL queries",
+            inputSchema = "{ \"sparql_query\": \"string\" }",
+            outputSchema = "{ \"head\": { \"vars\": [] }, \"results\": { \"bindings\": [] } }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("graph queries", "fact verification")
         ),
         FreeTool(
             id = "hackernews_api",
@@ -53,7 +82,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Firebase API",
             capabilities = listOf("Trend detection", "Sentiment tracking", "Launch signals", "Realtime stream"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "hackernews_adapter",
+            supportedOperations = listOf("sentiment_stream", "trend_detection", "top_signals"),
+            authenticationRequired = false,
+            rateLimitPolicy = "10,000 requests / second",
+            inputSchema = "{ \"endpoint\": \"topstories.json\" }",
+            outputSchema = "[ 12345, 67890 ]",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("trend detection", "sentiment tracking")
         ),
 
         // 02 — Engineering Division
@@ -66,7 +104,16 @@ object FreeToolCatalog {
             description = "Scans open source repositories, commit topologies, permissive licenses (MIT/Apache), and CI build status.",
             freeTierType = "Free Developer API (60 req/hr)",
             capabilities = listOf("Repo metadata", "Code inspection", "License verification", "Release tarballs"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "github_api_adapter",
+            supportedOperations = listOf("repo_search", "license_audit", "commit_inspection"),
+            authenticationRequired = false,
+            rateLimitPolicy = "60 requests / hour anonymous (IP-gated)",
+            inputSchema = "{ \"query\": \"string\", \"sort\": \"stars\" }",
+            outputSchema = "{ \"total_count\": 0, \"items\": [{ \"name\": \"string\", \"stargazers_count\": 0 }] }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("repo metadata", "license verification")
         ),
         FreeTool(
             id = "quicktype",
@@ -78,7 +125,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Open Source",
             capabilities = listOf("Kotlin data class", "TypeScript interfaces", "Type validation", "Nullability enforcement"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "quicktype_compiler",
+            supportedOperations = listOf("schema_compilation", "type_generation", "nullability_enforcement"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Local AST Compilation",
+            inputSchema = "{ \"source_json\": \"string\", \"target_language\": \"kotlin|typescript\" }",
+            outputSchema = "code_string",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("kotlin data class", "typescript interfaces")
         ),
         FreeTool(
             id = "mermaid_live",
@@ -90,7 +146,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Open Source",
             capabilities = listOf("Flowchart SVG", "Sequence diagrams", "State machines", "Architecture graphs"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "mermaid_compiler",
+            supportedOperations = listOf("diagram_compilation", "sequence_synthesis", "architecture_model"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Client-Side Synthesis",
+            inputSchema = "{ \"diagram_type\": \"sequence|class|flowchart\", \"entities\": [] }",
+            outputSchema = "mermaid_dsl_string",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("sequence diagrams", "architecture graphs")
         ),
         FreeTool(
             id = "jsoncrack",
@@ -102,7 +167,16 @@ object FreeToolCatalog {
             freeTierType = "Free Web Application",
             capabilities = listOf("Tree graph layout", "Node search", "Schema collapse", "Export SVG"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "jsoncrack_adapter",
+            supportedOperations = listOf("graph_layout", "tree_visualization", "schema_collapse"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Client Execution",
+            inputSchema = "{ \"json_tree\": \"object\" }",
+            outputSchema = "{ \"nodes\": [], \"edges\": [] }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("tree graph layout", "schema collapse")
         ),
         FreeTool(
             id = "hoppscotch",
@@ -114,7 +188,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Open Source",
             capabilities = listOf("REST testing", "GraphQL query", "Header verification", "Mock responses"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.WEBVIEW_BRIDGE,
+            adapterId = "generic_rest_adapter",
+            supportedOperations = listOf("rest_testing", "graphql_query", "header_verification"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unmetered",
+            inputSchema = "{ \"method\": \"GET|POST\", \"endpoint\": \"string\" }",
+            outputSchema = "{ \"status\": 200, \"headers\": {}, \"body\": \"string\" }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("rest testing", "header verification")
         ),
 
         // 03 — Creative Division
@@ -127,7 +210,16 @@ object FreeToolCatalog {
             description = "Professional online image editing workstation supporting PSD, AI, RAW, and SVG layer pipelines.",
             freeTierType = "100% Free Web App",
             capabilities = listOf("Layer masks", "Color curves", "Typography styles", "PSD automation"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.WEBVIEW_BRIDGE,
+            adapterId = "photopea_adapter",
+            supportedOperations = listOf("color_grading", "layer_compositing", "psd_automation"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Client Execution",
+            inputSchema = "{ \"script\": \"javascript_photoshop_actions\" }",
+            outputSchema = "{ \"canvas_ready\": true, \"rendered_layers\": 4 }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("color curves", "layer masks")
         ),
         FreeTool(
             id = "remove_bg",
@@ -138,7 +230,16 @@ object FreeToolCatalog {
             description = "High-precision neural computer vision algorithm for isolating subjects and generating alpha transparency masks.",
             freeTierType = "Generous Free Web API",
             capabilities = listOf("Alpha cutout", "Edge feathering", "Hair isolation", "PNG transparency"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "remove_bg_adapter",
+            supportedOperations = listOf("alpha_cutout", "background_removal", "feathering"),
+            authenticationRequired = false,
+            rateLimitPolicy = "50 free previews / month",
+            inputSchema = "{ \"image_url\": \"string\", \"format\": \"png\" }",
+            outputSchema = "{ \"alpha_channel_status\": \"ok\", \"transparency\": true }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("alpha cutout", "png transparency")
         ),
         FreeTool(
             id = "realesrgan",
@@ -150,7 +251,16 @@ object FreeToolCatalog {
             freeTierType = "Open Source / Free Web API",
             capabilities = listOf("Upscale", "4x Upscaling", "Super-resolution", "Denoising", "Detail reconstruction"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "realesrgan_adapter",
+            supportedOperations = listOf("super_resolution", "4x_upscaling", "denoising"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Open Inference",
+            inputSchema = "{ \"scale\": 4, \"denoise_level\": 2 }",
+            outputSchema = "{ \"output_resolution\": \"2048x2048\", \"psnr_score\": 34.8 }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("4x upscaling", "super-resolution")
         ),
         FreeTool(
             id = "squoosh",
@@ -162,7 +272,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Open Source",
             capabilities = listOf("WebP/AVIF encoding", "Lossless compression", "Palette reduction", "Client-side WASM"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "squoosh_adapter",
+            supportedOperations = listOf("webp_compression", "avif_encoding", "payload_optimization"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Client-Side Unlimited WASM",
+            inputSchema = "{ \"target_format\": \"webp\", \"quality\": 82 }",
+            outputSchema = "{ \"savings_percent\": \"87%\", \"compressed_bytes\": 320000 }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("webp/avif encoding", "lossless compression")
         ),
         FreeTool(
             id = "vectorizer",
@@ -173,7 +292,16 @@ object FreeToolCatalog {
             description = "Converts raster bitmaps into infinite-resolution SVG vectors with geometric path smoothing.",
             freeTierType = "Free Web Utility",
             capabilities = listOf("Path tracing", "SVG sanitization", "Color clustering", "Node reduction"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "vectorizer_adapter",
+            supportedOperations = listOf("svg_tracing", "vector_conversion", "path_smoothing"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Free Unlimited Vectorizer",
+            inputSchema = "{ \"bitmap_input\": \"string\" }",
+            outputSchema = "<svg>...</svg>",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("path tracing", "svg sanitization")
         ),
         FreeTool(
             id = "ttsmaker",
@@ -184,7 +312,16 @@ object FreeToolCatalog {
             description = "Free speech synthesis providing natural human timbre voices in 50+ languages with full commercial license.",
             freeTierType = "Free Online Service (20k chars/wk)",
             capabilities = listOf("Speech synthesis", "Pitch modulation", "Natural pauses", "WAV export"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "generic_rest_adapter",
+            supportedOperations = listOf("speech_synthesis", "pitch_modulation", "audio_export"),
+            authenticationRequired = false,
+            rateLimitPolicy = "20,000 characters / week",
+            inputSchema = "{ \"text\": \"string\", \"voice_id\": \"en_us_1\" }",
+            outputSchema = "{ \"audio_format\": \"wav\", \"duration_sec\": 12 }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("speech synthesis", "wav export")
         ),
         FreeTool(
             id = "audacity_online",
@@ -196,7 +333,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Open Source",
             capabilities = listOf("Vocal cleanup", "EQ modulation", "Dynamic compression", "Mastering"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "generic_rest_adapter",
+            supportedOperations = listOf("waveform_editing", "noise_reduction", "stereo_eq"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Client-Side Unlimited Web Audio",
+            inputSchema = "{ \"action\": \"denoise\", \"threshold_db\": -24 }",
+            outputSchema = "{ \"noise_floor_db\": -58, \"status\": \"normalized\" }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("vocal cleanup", "eq modulation")
         ),
         FreeTool(
             id = "freesound",
@@ -208,7 +354,16 @@ object FreeToolCatalog {
             freeTierType = "Open Non-Profit API",
             capabilities = listOf("CC0 licensing", "Audio fingerprinting", "Spectral preview", "Stem extraction"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "generic_rest_adapter",
+            supportedOperations = listOf("sound_search", "cc0_licensing", "audio_stems"),
+            authenticationRequired = false,
+            rateLimitPolicy = "60 requests / minute",
+            inputSchema = "{ \"query\": \"string\" }",
+            outputSchema = "{ \"count\": 12, \"results\": [] }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("cc0 licensing", "stem extraction")
         ),
 
         // 04 — Enterprise Division
@@ -222,7 +377,16 @@ object FreeToolCatalog {
             freeTierType = "Free Public Search API",
             capabilities = listOf("Corporate verification", "Officer search", "Jurisdiction checks", "Filing history"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "opencorporates_adapter",
+            supportedOperations = listOf("corporate_audit", "officer_search", "jurisdiction_check"),
+            authenticationRequired = false,
+            rateLimitPolicy = "500 calls / month free",
+            inputSchema = "{ \"company_name\": \"string\", \"jurisdiction\": \"us_de\" }",
+            outputSchema = "{ \"company\": { \"name\": \"string\", \"status\": \"Active\" } }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("corporate verification", "jurisdiction checks")
         ),
         FreeTool(
             id = "similarweb_free",
@@ -233,7 +397,16 @@ object FreeToolCatalog {
             description = "Analyzes digital market share, website traffic estimates, competitor referrals, and organic search keywords.",
             freeTierType = "Free Public Tier",
             capabilities = listOf("Traffic metrics", "Competitor benchmarks", "Audience overlap", "Referral channels"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "similarweb_adapter",
+            supportedOperations = listOf("traffic_metrics", "competitor_benchmarks", "channel_analysis"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Anonymous Traffic Index",
+            inputSchema = "{ \"domain\": \"string\" }",
+            outputSchema = "{ \"visits\": 1200000, \"global_rank\": 14200 }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("traffic metrics", "competitor benchmarks")
         ),
         FreeTool(
             id = "namecheap_whois",
@@ -244,7 +417,16 @@ object FreeToolCatalog {
             description = "Inspects trademark conflicts, domain availability, registrar ownership, and global nameserver topologies.",
             freeTierType = "Free ICANN Query Bridge",
             capabilities = listOf("Domain lookup", "WHOIS inspection", "DNS resolution", "Trademark check"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "whois_adapter",
+            supportedOperations = listOf("whois_lookup", "dns_inspection", "trademark_check"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unmetered ICANN bridge",
+            inputSchema = "{ \"domain\": \"string\" }",
+            outputSchema = "{ \"registered\": true, \"registrar\": \"Namecheap\", \"dnssec\": true }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("domain lookup", "whois inspection")
         ),
 
         // 05 — Automation Division
@@ -258,7 +440,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Open Source",
             capabilities = listOf("PDF OCR", "Docx conversion", "Page reordering", "Security metadata removal"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "stirling_pdf_adapter",
+            supportedOperations = listOf("pdf_merge", "sanitize_metadata", "doc_convert"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Self-Hosted / Local Engine",
+            inputSchema = "{ \"pages\": 14, \"action\": \"sanitize\" }",
+            outputSchema = "{ \"metadata_cleared\": true, \"compliance\": \"PDF/A-2b\" }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("pdf ocr", "page reordering")
         ),
         FreeTool(
             id = "ocr_space",
@@ -269,7 +460,16 @@ object FreeToolCatalog {
             description = "Parses scanned receipts, documentation, invoices, and photos into structured, searchable text streams.",
             freeTierType = "Free API (25,000 calls/mo)",
             capabilities = listOf("Table parsing", "Multi-lingual OCR", "Orientation detection", "JSON bounding boxes"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "ocr_space_adapter",
+            supportedOperations = listOf("ocr_text_extraction", "table_parse", "receipt_scan"),
+            authenticationRequired = false,
+            rateLimitPolicy = "25,000 calls / month free anonymous API",
+            inputSchema = "{ \"file_type\": \"pdf|png\", \"is_table\": true }",
+            outputSchema = "{ \"ParsedResults\": [{ \"ParsedText\": \"string\" }] }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("table parsing", "multi-lingual ocr")
         ),
         FreeTool(
             id = "webhook_site",
@@ -280,7 +480,16 @@ object FreeToolCatalog {
             description = "Instant URL endpoint generator for debugging inbound webhooks, payload schemas, and event triggers.",
             freeTierType = "100% Free Service",
             capabilities = listOf("Webhook listener", "JSON payload capture", "CORS header mock", "Event verification"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "webhook_site_adapter",
+            supportedOperations = listOf("webhook_listener", "payload_inspection", "event_trigger"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited free webhook testing",
+            inputSchema = "{ \"event\": \"workflow_dispatch\" }",
+            outputSchema = "{ \"status\": \"delivered_200_ok\" }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("webhook listener", "json payload capture")
         ),
         FreeTool(
             id = "hemingway_web",
@@ -291,7 +500,16 @@ object FreeToolCatalog {
             description = "Automated readability grader highlighting passive voice, dense clauses, and stylistic weaknesses in deliverables.",
             freeTierType = "Free Web Application",
             capabilities = listOf("Grade level index", "Clarity score", "Passive voice flag", "Sentence breakdown"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "generic_rest_adapter",
+            supportedOperations = listOf("readability_grading", "style_analysis", "passive_voice_check"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Web Usage",
+            inputSchema = "{ \"text\": \"string\" }",
+            outputSchema = "{ \"grade_level\": 9, \"passive_voice\": 0 }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("grade level index", "clarity score")
         ),
 
         // 06 — Personal Operations Division
@@ -305,7 +523,16 @@ object FreeToolCatalog {
             freeTierType = "100% Free Open Source",
             capabilities = listOf("Spatial canvas", "Hand-drawn diagrams", "SVG/PNG export", "Local storage"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "excalidraw_adapter",
+            supportedOperations = listOf("whiteboard_model", "spatial_canvas", "hand_drawn_diagrams"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Local Storage",
+            inputSchema = "{ \"elements\": [] }",
+            outputSchema = "{ \"type\": \"excalidraw\", \"elements\": [] }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("spatial canvas", "hand-drawn diagrams")
         ),
         FreeTool(
             id = "cal_com_free",
@@ -317,7 +544,16 @@ object FreeToolCatalog {
             freeTierType = "Free Individual Tier",
             capabilities = listOf("Booking links", "Timezone math", "ICS generation", "Buffer management"),
             openSource = true,
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.REST_API,
+            adapterId = "cal_com_adapter",
+            supportedOperations = listOf("ics_generation", "booking_links", "timezone_math"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Free Single User Unlimited",
+            inputSchema = "{ \"event_title\": \"string\", \"start_time\": \"iso8601\" }",
+            outputSchema = "BEGIN:VCALENDAR...END:VCALENDAR",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("booking links", "ics generation")
         ),
         FreeTool(
             id = "jsonlint",
@@ -328,7 +564,16 @@ object FreeToolCatalog {
             description = "Fast JSON validator and formatter for cleaning database backups, state records, and export files.",
             freeTierType = "100% Free Web Tool",
             capabilities = listOf("Syntax validation", "Formatting", "Error highlighting", "Encoding check"),
-            status = ToolCapabilityStatus.VERIFIED
+            status = ToolCapabilityStatus.VERIFIED,
+            integrationType = IntegrationType.LOCAL_ENGINE,
+            adapterId = "jsonlint_adapter",
+            supportedOperations = listOf("json_validation", "syntax_format", "data_hygiene"),
+            authenticationRequired = false,
+            rateLimitPolicy = "Unlimited Client-Side Sanitization",
+            inputSchema = "{ \"raw_payload\": \"string\" }",
+            outputSchema = "{ \"syntax_valid\": true, \"sanitized\": true }",
+            healthStatus = RuntimeHealthStatus.HEALTHY_ONLINE,
+            requiredCapabilities = listOf("syntax validation", "formatting")
         )
     )
 
@@ -344,7 +589,16 @@ object FreeToolCatalog {
             it.description.lowercase().contains(q) ||
             it.category.lowercase().contains(q) ||
             it.division.title.lowercase().contains(q) ||
-            it.capabilities.any { cap -> cap.lowercase().contains(q) }
+            it.capabilities.any { cap -> cap.lowercase().contains(q) } ||
+            it.integrationType.label.lowercase().contains(q) ||
+            it.supportedOperations.any { op -> op.lowercase().contains(q) }
         }
+    }
+
+    val allTools: List<FreeTool>
+        get() = ALL_TOOLS
+
+    fun findById(id: String): FreeTool? {
+        return ALL_TOOLS.find { it.id.equals(id, ignoreCase = true) }
     }
 }

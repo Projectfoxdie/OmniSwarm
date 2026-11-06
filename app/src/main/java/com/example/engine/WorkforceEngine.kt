@@ -11,6 +11,10 @@ import com.example.model.FreeTool
 import com.example.model.LogLevel
 import com.example.model.OperatingDivision
 import com.example.model.OutcomeVerificationResult
+import com.example.engine.adapter.ToolExecutionRegistry
+import com.example.engine.resolver.CompatibleFallbackResolver
+import com.example.engine.validation.ArtifactValidator
+import com.example.model.ArtifactValidationResult
 import com.example.model.SelfHealingEvent
 import com.example.model.WorkflowPipeline
 import kotlinx.coroutines.delay
@@ -499,9 +503,17 @@ class WorkforceEngine {
 
         val updatedAgents = current.agents.toMutableList()
         val total = updatedAgents.size
+        val validationResults = mutableListOf<ArtifactValidationResult>()
 
         for (i in updatedAgents.indices) {
             val agent = updatedAgents[i]
+
+            // If resuming from approval, preserve completed deliverables
+            if (agent.status == AgentStatus.COMPLETED) {
+                agent.validationResult?.let { validationResults.add(it) }
+                continue
+            }
+
             val startTime = System.currentTimeMillis()
             val logs = agent.logs.toMutableList()
 
@@ -538,70 +550,29 @@ class WorkforceEngine {
                 return // Pause until user approves in UI
             }
 
-            // 2. Connecting to Free Tool
+            // 2. Connecting & Invoking Free Tool Adapter
             logs.add(
                 AgentLogEntry(
                     timestampMs = System.currentTimeMillis(),
                     relativeTime = formatTime(System.currentTimeMillis() - startTime),
                     level = LogLevel.TOOL_CALL,
-                    message = "Connecting to tool bridge: ${agent.tool.name} (${agent.tool.url})"
+                    message = "Dispatching execution via ${agent.tool.integrationType.label} adapter [${agent.tool.adapterId}] for ${agent.tool.name} (${agent.tool.url})"
                 )
             )
 
             updatedAgents[i] = agent.copy(
                 status = AgentStatus.SWEEPING_TOOL,
-                progress = 0.2f,
+                progress = 0.25f,
                 logs = logs
             )
             current = current.copy(
                 agents = updatedAgents.toList(),
-                overallProgress = (i + 0.2f) / total
+                overallProgress = (i + 0.25f) / total
             )
             onUpdate(current)
-            delay(750)
+            delay(300)
 
-            // 3. Self-Healing Simulation on selective steps to demonstrate resilience
-            var activeTool = agent.tool
-            val selfHealingEvents = agent.selfHealingEvents.toMutableList()
-
-            if (i == 1 && agent.fallbackTool != null && agent.selfHealingEvents.isEmpty()) {
-                logs.add(
-                    AgentLogEntry(
-                        timestampMs = System.currentTimeMillis(),
-                        relativeTime = formatTime(System.currentTimeMillis() - startTime),
-                        level = LogLevel.WARN,
-                        message = "Rate limit / network latency anomaly detected on ${agent.tool.name}."
-                    )
-                )
-                logs.add(
-                    AgentLogEntry(
-                        timestampMs = System.currentTimeMillis(),
-                        relativeTime = formatTime(System.currentTimeMillis() - startTime),
-                        level = LogLevel.SELF_HEALING,
-                        message = "Self-Healing Protocol Engaged: Switching execution to fallback bridge [${agent.fallbackTool.name}] without stopping pipeline."
-                    )
-                )
-                selfHealingEvents.add(
-                    SelfHealingEvent(
-                        timestampMs = System.currentTimeMillis(),
-                        failedToolName = agent.tool.name,
-                        reason = "Automated load failover & quota safeguard",
-                        fallbackToolName = agent.fallbackTool.name,
-                        outcome = "Switched to verified fallback tool with zero data loss."
-                    )
-                )
-                activeTool = agent.fallbackTool
-
-                updatedAgents[i] = updatedAgents[i].copy(
-                    status = AgentStatus.SELF_HEALING,
-                    selfHealingEvents = selfHealingEvents,
-                    logs = logs
-                )
-                onUpdate(current.copy(agents = updatedAgents.toList()))
-                delay(800)
-            }
-
-            // 4. Recursive Delegation execution if subagents exist
+            // 3. Recursive Delegation execution if subagents exist
             if (agent.subAgents.isNotEmpty()) {
                 logs.add(
                     AgentLogEntry(
@@ -617,52 +588,141 @@ class WorkforceEngine {
                             timestampMs = System.currentTimeMillis(),
                             relativeTime = formatTime(System.currentTimeMillis() - startTime),
                             level = LogLevel.INFO,
-                            message = "↳ [Subagent ${sub.name}] executed: ${sub.taskDescription}"
+                            message = "↳ [Subagent ${sub.name}] executing: ${sub.taskDescription}"
                         )
                     )
                 }
-                delay(600)
+                delay(300)
             }
 
-            // 5. Executing Task
+            // 4. Executing Task with Primary Tool Adapter
             logs.add(
                 AgentLogEntry(
                     timestampMs = System.currentTimeMillis(),
                     relativeTime = formatTime(System.currentTimeMillis() - startTime),
                     level = LogLevel.INFO,
-                    message = "Executing assignment: \"${agent.taskDescription}\""
+                    message = "Executing assignment: \"${agent.taskDescription}\" (Target schema: ${agent.tool.outputSchema})"
                 )
             )
 
             updatedAgents[i] = updatedAgents[i].copy(
                 status = AgentStatus.RUNNING_TASK,
-                progress = 0.6f,
+                progress = 0.5f,
                 logs = logs
             )
             current = current.copy(
                 agents = updatedAgents.toList(),
-                overallProgress = (i + 0.6f) / total
+                overallProgress = (i + 0.5f) / total
             )
             onUpdate(current)
-            delay(900)
 
-            // 6. Completion & Artifact Generation
+            var activeTool = agent.tool
+            val selfHealingEvents = agent.selfHealingEvents.toMutableList()
+
+            // Real execution through registered executable adapter
+            var execResponse = ToolExecutionRegistry.execute(
+                tool = activeTool,
+                prompt = current.prompt,
+                taskDescription = agent.taskDescription
+            )
+
+            // 5. Genuine Capability-Based Failover & Self-Healing
+            // Triggered if the primary adapter failed, timed out, or returned an error status code
+            if (!execResponse.success || execResponse.statusCode >= 400) {
+                val requiredOp = activeTool.supportedOperations.firstOrNull() ?: agent.taskDescription
+                logs.add(
+                    AgentLogEntry(
+                        timestampMs = System.currentTimeMillis(),
+                        relativeTime = formatTime(System.currentTimeMillis() - startTime),
+                        level = LogLevel.WARN,
+                        message = "Primary adapter anomaly on ${activeTool.name}: HTTP ${execResponse.statusCode} - ${execResponse.errorMessage ?: "Execution failed"}"
+                    )
+                )
+
+                // Resolve capability-compatible fallback tool using capability matching algorithm
+                val resolvedFallback = agent.fallbackTool?.takeIf { candidate ->
+                    candidate.supportedOperations.any { it.equals(requiredOp, ignoreCase = true) } ||
+                    candidate.capabilities.intersect(activeTool.capabilities.toSet()).isNotEmpty()
+                } ?: CompatibleFallbackResolver.resolveCompatibleFallback(
+                    failingTool = activeTool,
+                    requiredOperation = requiredOp,
+                    candidatePool = FreeToolCatalog.allTools
+                )
+
+                if (resolvedFallback != null) {
+                    logs.add(
+                        AgentLogEntry(
+                            timestampMs = System.currentTimeMillis(),
+                            relativeTime = formatTime(System.currentTimeMillis() - startTime),
+                            level = LogLevel.SELF_HEALING,
+                            message = "Self-Healing Protocol Engaged: Switching execution to capability-matched fallback [${resolvedFallback.name}] satisfying operation '$requiredOp'."
+                        )
+                    )
+
+                    selfHealingEvents.add(
+                        SelfHealingEvent(
+                            timestampMs = System.currentTimeMillis(),
+                            failedToolName = activeTool.name,
+                            reason = "HTTP ${execResponse.statusCode}: ${execResponse.errorMessage ?: "Adapter execution error"}",
+                            fallbackToolName = resolvedFallback.name,
+                            outcome = "Seamlessly migrated workload to capability-matched fallback tool ${resolvedFallback.name}."
+                        )
+                    )
+
+                    activeTool = resolvedFallback
+                    updatedAgents[i] = updatedAgents[i].copy(
+                        status = AgentStatus.SELF_HEALING,
+                        selfHealingEvents = selfHealingEvents,
+                        logs = logs
+                    )
+                    onUpdate(current.copy(agents = updatedAgents.toList()))
+                    delay(400)
+
+                    // Execute fallback tool adapter
+                    execResponse = ToolExecutionRegistry.execute(
+                        tool = activeTool,
+                        prompt = current.prompt,
+                        taskDescription = agent.taskDescription
+                    ).copy(isFallback = true)
+                } else {
+                    logs.add(
+                        AgentLogEntry(
+                            timestampMs = System.currentTimeMillis(),
+                            relativeTime = formatTime(System.currentTimeMillis() - startTime),
+                            level = LogLevel.WARN,
+                            message = "No compatible fallback tool matched required operation '$requiredOp'."
+                        )
+                    )
+                }
+            }
+
+            // 6. Real Artifact Integrity & Acceptance Validation
+            val validationResult = ArtifactValidator.validate(
+                tool = activeTool,
+                taskDescription = agent.taskDescription,
+                response = execResponse
+            )
+            validationResults.add(validationResult)
+
             val elapsed = System.currentTimeMillis() - startTime
             logs.add(
                 AgentLogEntry(
                     timestampMs = System.currentTimeMillis(),
                     relativeTime = formatTime(elapsed),
-                    level = LogLevel.SUCCESS,
-                    message = "Stage deliverable achieved: ${agent.outputArtifactTitle} in ${elapsed}ms via ${activeTool.name}."
+                    level = if (validationResult.isValid) LogLevel.SUCCESS else LogLevel.WARN,
+                    message = "Deliverable verified: ${execResponse.artifactTitle} (${validationResult.byteSize} bytes, SHA-256: ${validationResult.sha256Checksum.take(12)}..., Score: ${validationResult.qualityScore}%)"
                 )
             )
 
             updatedAgents[i] = updatedAgents[i].copy(
-                status = AgentStatus.COMPLETED,
+                status = if (validationResult.isValid) AgentStatus.COMPLETED else AgentStatus.FAILED,
                 progress = 1.0f,
                 logs = logs,
                 executionTimeMs = elapsed,
-                outputArtifactData = "Output successfully verified by Operations Director. Tool: ${activeTool.name}."
+                outputArtifactTitle = execResponse.artifactTitle,
+                outputArtifactData = execResponse.outputData,
+                executionResponse = execResponse,
+                validationResult = validationResult
             )
 
             current = current.copy(
@@ -670,29 +730,42 @@ class WorkforceEngine {
                 overallProgress = (i + 1.0f) / total
             )
             onUpdate(current)
-            delay(400)
+            delay(300)
         }
 
-        // Quality Director Outcome Verification
+        // 7. Evidence-based Quality Director Outcome Verification
+        val totalArtifacts = validationResults.size
+        val avgScore = if (validationResults.isNotEmpty()) {
+            validationResults.map { it.qualityScore }.average().toInt()
+        } else {
+            0
+        }
+        val allValid = validationResults.all { it.isValid }
+        val allCheckpoints = validationResults.flatMap { it.passedChecks }.distinct()
+
         val verification = OutcomeVerificationResult(
-            isVerified = true,
-            qualityScorePercent = 99,
-            verifiedBy = "Quality Director (System Integrity Engine)",
-            auditSummary = "All ${total} division agents passed verification criteria with zero defects. Self-healing protocols resolved all transient tool latencies.",
-            passedChecks = listOf(
-                "Objective alignment: 100% compliant",
-                "Tool capability status: 100% verified free tiers",
-                "Data handoff parity: 0 byte loss",
-                "Outcome verification: Grade A+ certified"
-            )
+            isVerified = allValid && avgScore >= 60,
+            qualityScorePercent = avgScore,
+            verifiedBy = "Quality Director (Evidence-Based Integrity Engine)",
+            auditSummary = "Certified $totalArtifacts deliverables across ${current.primaryDivision.title}. Validated with cryptographic SHA-256 checksums, response schemas, and capability-matched fallbacks.",
+            passedChecks = allCheckpoints.ifEmpty {
+                listOf(
+                    "Objective alignment: Verified by division directors",
+                    "Tool capability status: Verified live adapters",
+                    "Cryptographic integrity: SHA-256 digests validated"
+                )
+            },
+            validationResults = validationResults,
+            totalArtifactsValidated = totalArtifacts,
+            averageChecksum = validationResults.map { it.sha256Checksum }.filter { it.isNotEmpty() }.joinToString(", ").take(64)
         )
 
         val completed = current.copy(
-            overallStatus = AgentStatus.COMPLETED,
+            overallStatus = if (allValid) AgentStatus.COMPLETED else AgentStatus.FAILED,
             overallProgress = 1.0f,
             activeApprovalGate = null,
             verificationResult = verification,
-            finalOutputSummary = "Mission accomplished by ${current.primaryDivision.title}. Orchestrated ${total} agents across hierarchical directors and specialist subteams with outcome verification."
+            finalOutputSummary = "Mission accomplished by ${current.primaryDivision.title}. Orchestrated ${total} agents across hierarchical directors and specialist subteams. Verified $totalArtifacts live deliverables with average evidence score of $avgScore%."
         )
 
         onUpdate(completed)

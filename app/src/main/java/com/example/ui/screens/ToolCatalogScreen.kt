@@ -273,17 +273,34 @@ fun ToolCatalogScreen(
                                     )
                                 }
 
-                                Surface(
-                                    color = MintSecondary.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = tool.freeTierType,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MintSecondary,
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                                    )
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Surface(
+                                        color = Color(tool.integrationType.badgeColor).copy(alpha = 0.18f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = tool.integrationType.label,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(tool.integrationType.badgeColor),
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .background(Color(tool.healthStatus.color), CircleShape)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = tool.healthStatus.label,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(tool.healthStatus.color)
+                                        )
+                                    }
                                 }
                             }
 
@@ -296,7 +313,31 @@ fun ToolCatalogScreen(
                                 lineHeight = 16.sp
                             )
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Execution Engine Specs & Policy
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(TechSurfaceElevated, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Adapter: ${tool.adapterId}",
+                                    fontSize = 10.sp,
+                                    color = CyanPrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = tool.rateLimitPolicy,
+                                    fontSize = 10.sp,
+                                    color = TextMuted
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             // Capabilities chips
                             FlowRow(

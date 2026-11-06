@@ -9,9 +9,11 @@ import com.example.model.AgentRoleType
 import com.example.model.AgentStatus
 import com.example.model.AuthorityMode
 import com.example.model.FreeTool
+import com.example.model.IntegrationType
 import com.example.model.LogLevel
 import com.example.model.OperatingDivision
 import com.example.model.OutcomeVerificationResult
+import com.example.model.RuntimeHealthStatus
 import com.example.model.SelfHealingEvent
 import com.example.model.ToolCapabilityStatus
 import com.example.model.WorkflowPipeline
@@ -70,9 +72,17 @@ class WorkflowRepository(context: Context) {
                     put("freeTierType", agent.tool.freeTierType)
                     put("openSource", agent.tool.openSource)
                     put("status", agent.tool.status.name)
+                    put("integrationType", agent.tool.integrationType.name)
+                    put("adapterId", agent.tool.adapterId)
+                    put("healthStatus", agent.tool.healthStatus.name)
+                    put("rateLimitPolicy", agent.tool.rateLimitPolicy)
+                    put("outputSchema", agent.tool.outputSchema)
                     val capArr = JSONArray()
                     agent.tool.capabilities.forEach { capArr.put(it) }
                     put("capabilities", capArr)
+                    val opsArr = JSONArray()
+                    agent.tool.supportedOperations.forEach { opsArr.put(it) }
+                    put("supportedOperations", opsArr)
                 }
                 put("tool", toolObj)
 
@@ -163,6 +173,14 @@ class WorkflowRepository(context: Context) {
                     }
                 }
 
+                val opsList = mutableListOf<String>()
+                val opsArr = toolObj.optJSONArray("supportedOperations")
+                if (opsArr != null) {
+                    for (o in 0 until opsArr.length()) {
+                        opsList.add(opsArr.getString(o))
+                    }
+                }
+
                 val toolDivision = try {
                     OperatingDivision.valueOf(toolObj.optString("division", division.name))
                 } catch (_: Exception) {
@@ -175,6 +193,18 @@ class WorkflowRepository(context: Context) {
                     ToolCapabilityStatus.VERIFIED
                 }
 
+                val integrationType = try {
+                    IntegrationType.valueOf(toolObj.optString("integrationType", "REST_API"))
+                } catch (_: Exception) {
+                    IntegrationType.REST_API
+                }
+
+                val healthStatus = try {
+                    RuntimeHealthStatus.valueOf(toolObj.optString("healthStatus", "HEALTHY_ONLINE"))
+                } catch (_: Exception) {
+                    RuntimeHealthStatus.HEALTHY_ONLINE
+                }
+
                 val freeTool = FreeTool(
                     id = toolObj.optString("id", "tool_$i"),
                     name = toolObj.optString("name", "Free Online Utility"),
@@ -185,7 +215,13 @@ class WorkflowRepository(context: Context) {
                     freeTierType = toolObj.optString("freeTierType", "100% Free"),
                     capabilities = capList,
                     openSource = toolObj.optBoolean("openSource", false),
-                    status = toolStatus
+                    status = toolStatus,
+                    integrationType = integrationType,
+                    adapterId = toolObj.optString("adapterId", "default_adapter"),
+                    supportedOperations = opsList,
+                    rateLimitPolicy = toolObj.optString("rateLimitPolicy", "Free Anonymous Tier"),
+                    outputSchema = toolObj.optString("outputSchema", "{}"),
+                    healthStatus = healthStatus
                 )
 
                 val logsList = mutableListOf<AgentLogEntry>()
