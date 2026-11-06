@@ -1,0 +1,6 @@
+{
+  "name": "OmniSwarm",
+  "description": "Autonomous multi-agent workforce orchestrator that sweeps free online tools and executes targeted project pipelines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Connecting network bridges -->
+    <path
+        android:pathData="M54,54 L36,36 M54,54 L72,36 M54,54 L36,72 M54,54 L72,72 M36,36 L72,36 M36,72 L72,72"
+        android:strokeWidth="3.5"
+        android:strokeColor="#00FF9D"
+        android:strokeLineCap="round" />
+    
+    <!-- Central Hub Node -->
+    <path
+        android:pathData="M54,44 A10,10 0 1,1 53.99,44 Z"
+        android:fillColor="#00F0FF" />
+    <path
+        android:pathData="M54,49 A5,5 0 1,1 53.99,49 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Top Left Worker Node -->
+    <path
+        android:pathData="M36,29 A7,7 0 1,1 35.99,29 Z"
+        android:fillColor="#00FF9D" />
+    <!-- Top Right Worker Node -->
+    <path
+        android:pathData="M72,29 A7,7 0 1,1 71.99,29 Z"
+        android:fillColor="#00F0FF" />
+    <!-- Bottom Left Worker Node -->
+    <path
+        android:pathData="M36,65 A7,7 0 1,1 35.99,65 Z"
+        android:fillColor="#00F0FF" />
+    <!-- Bottom Right Worker Node -->
+    <path
+        android:pathData="M72,65 A7,7 0 1,1 71.99,65 Z"
+        android:fillColor="#00FF9D" />
+</vector>
