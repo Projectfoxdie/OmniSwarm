@@ -133,6 +133,14 @@ data class FreeTool(
     val requiredCapabilities: List<String> = emptyList()
 )
 
+enum class VerificationState {
+    PENDING,
+    AUDITING,
+    VERIFIED,
+    REJECTED,
+    FAILED
+}
+
 data class ToolExecutionResponse(
     val success: Boolean,
     val statusCode: Int = 200,
@@ -145,7 +153,16 @@ data class ToolExecutionResponse(
     val errorMessage: String? = null,
     val isFallback: Boolean = false,
     val executionEngine: String = "OkHttp Engine",
-    val verifiedChecksum: String = ""
+    val verifiedChecksum: String = "",
+    val adapterId: String = "",
+    val implementationClass: String = "",
+    val requestUrl: String = "",
+    val httpMethod: String = "GET",
+    val requestStartMs: Long = 0L,
+    val requestEndMs: Long = 0L,
+    val responseByteCount: Int = 0,
+    val sha256Digest: String = "",
+    val artifactLocation: String = ""
 )
 
 data class ArtifactValidationResult(
@@ -154,8 +171,11 @@ data class ArtifactValidationResult(
     val byteSize: Int,
     val schemaValid: Boolean,
     val passedChecks: List<String>,
+    val failedChecks: List<String> = emptyList(),
     val qualityScore: Int,
-    val validationNotes: String
+    val validationNotes: String,
+    val syntaxErrors: List<String> = emptyList(),
+    val independentlyVerified: Boolean = true
 )
 
 data class AgentLogEntry(
@@ -174,14 +194,19 @@ data class SelfHealingEvent(
 )
 
 data class OutcomeVerificationResult(
+    val state: VerificationState = VerificationState.PENDING,
     val isVerified: Boolean = false,
-    val qualityScorePercent: Int = 100,
-    val verifiedBy: String = "Quality Director",
+    val qualityScorePercent: Int = 0,
+    val verifiedBy: String = "Quality Director (Independent Verification Engine)",
     val auditSummary: String = "",
     val passedChecks: List<String> = emptyList(),
+    val failedChecks: List<String> = emptyList(),
     val validationResults: List<ArtifactValidationResult> = emptyList(),
     val totalArtifactsValidated: Int = 0,
-    val averageChecksum: String = ""
+    val averageChecksum: String = "",
+    val uniqueEvidenceCount: Int = 0,
+    val duplicateEvidenceDetected: Int = 0,
+    val rejectionReason: String? = null
 )
 
 data class ApprovalGate(
@@ -234,3 +259,38 @@ data class WorkflowPipeline(
     val finalArtifactUrls: List<String> = emptyList(),
     val executionLog: List<AgentLogEntry> = emptyList()
 )
+
+enum class DisplayMode(val label: String, val description: String) {
+    MOBILE("Mobile Mode", "Optimized single-column handheld layout"),
+    DESKTOP("Desktop Mode", "Wide workstation canvas with side-by-side panes")
+}
+
+enum class FeedbackCategory(val label: String, val iconEmoji: String) {
+    FEATURE_REQUEST("Feature Request", "🚀"),
+    BUG_REPORT("Bug Report", "🐛"),
+    EXECUTION_QUALITY("Execution Quality", "⚡"),
+    TOOL_INTEGRATION("Tool Integration", "🛠️"),
+    GENERAL("General Feedback", "💬")
+}
+
+data class FeedbackSubmission(
+    val id: String = "FB-${System.currentTimeMillis().toString().takeLast(6)}",
+    val timestampMs: Long = System.currentTimeMillis(),
+    val category: FeedbackCategory = FeedbackCategory.FEATURE_REQUEST,
+    val rating: Int = 5,
+    val title: String,
+    val message: String,
+    val includeDiagnostics: Boolean = true,
+    val diagnosticDetails: String = "",
+    val status: String = "Logged to QA Registry"
+)
+
+data class AppSettings(
+    val displayMode: DisplayMode = DisplayMode.MOBILE,
+    val isFullscreen: Boolean = false,
+    val autoAdvanceToResults: Boolean = true,
+    val strictQualityEnforcement: Boolean = true,
+    val soundAndHapticEnabled: Boolean = true,
+    val showExecutionTimer: Boolean = true
+)
+

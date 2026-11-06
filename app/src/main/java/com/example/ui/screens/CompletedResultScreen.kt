@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.model.FreeTool
+import com.example.model.VerificationState
 import com.example.model.WorkflowPipeline
 import com.example.ui.theme.CyanPrimary
 import com.example.ui.theme.MintSecondary
@@ -366,15 +367,26 @@ fun CompletedResultScreen(
             }
             // Quality Director Audit Hero Banner
             item {
+                val isCertified = pipeline.verificationResult.isVerified && pipeline.verificationResult.state == VerificationState.VERIFIED
+                val bannerBg = if (isCertified) Color(0xFF0C261A) else Color(0xFF2E1118)
+                val statusColor = if (isCertified) MintSecondary else Color(0xFFFF5376)
+                val statusTitle = when (pipeline.verificationResult.state) {
+                    VerificationState.VERIFIED -> "Outcome Certified"
+                    VerificationState.FAILED -> "Verification Failed"
+                    VerificationState.REJECTED -> "Outcome Rejected"
+                    VerificationState.AUDITING -> "Auditing Deliverables..."
+                    VerificationState.PENDING -> "Verification Pending"
+                }
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("quality_certification_banner"),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0C261A)),
+                    colors = CardDefaults.cardColors(containerColor = bannerBg),
                     shape = RoundedCornerShape(20.dp),
                     border = androidx.compose.foundation.BorderStroke(
                         1.5.dp,
-                        Brush.linearGradient(listOf(MintSecondary, CyanPrimary))
+                        if (isCertified) Brush.linearGradient(listOf(MintSecondary, CyanPrimary)) else Brush.linearGradient(listOf(Color(0xFFFF5376), Color(0xFFFFB800)))
                     )
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
@@ -388,13 +400,13 @@ fun CompletedResultScreen(
                                     modifier = Modifier
                                         .size(44.dp)
                                         .clip(CircleShape)
-                                        .background(MintSecondary.copy(alpha = 0.25f)),
+                                        .background(statusColor.copy(alpha = 0.25f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Verified,
-                                        contentDescription = "Quality Verified",
-                                        tint = MintSecondary,
+                                        imageVector = if (isCertified) Icons.Default.Verified else Icons.Default.Close,
+                                        contentDescription = "Quality Status",
+                                        tint = statusColor,
                                         modifier = Modifier.size(26.dp)
                                     )
                                 }
@@ -405,11 +417,11 @@ fun CompletedResultScreen(
                                         fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Bold,
-                                        color = MintSecondary,
+                                        color = statusColor,
                                         letterSpacing = 1.sp
                                     )
                                     Text(
-                                        text = "Outcome Certified",
+                                        text = statusTitle,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary
@@ -418,15 +430,15 @@ fun CompletedResultScreen(
                             }
 
                             Surface(
-                                color = MintSecondary.copy(alpha = 0.25f),
+                                color = statusColor.copy(alpha = 0.25f),
                                 shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MintSecondary)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, statusColor)
                             ) {
                                 Text(
-                                    text = "${pipeline.verificationResult.qualityScorePercent}% MATCH",
+                                    text = "${pipeline.verificationResult.qualityScorePercent}% EVIDENCE",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MintSecondary,
+                                    color = statusColor,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                 )
                             }
@@ -440,6 +452,46 @@ fun CompletedResultScreen(
                             color = TextPrimary,
                             lineHeight = 20.sp
                         )
+
+                        // Failed Verification Checks (if any)
+                        if (pipeline.verificationResult.failedChecks.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                color = Color(0x33440011),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Integrity Violations & Failed Checks:",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFF5376)
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    pipeline.verificationResult.failedChecks.forEach { check ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(vertical = 3.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Failed",
+                                                tint = Color(0xFFFF5376),
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = check,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFFFFB4C0),
+                                                lineHeight = 16.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(14.dp))
 
@@ -737,6 +789,55 @@ fun CompletedResultScreen(
                                                 )
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Execution Telemetry & Artifact Verification Record
+                        if (agent.executionResponse != null) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                color = TechSurfaceElevated,
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, TechOutline),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text(
+                                        text = "EXECUTION TELEMETRY & AUDIT HASH",
+                                        fontSize = 9.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CyanPrimary,
+                                        letterSpacing = 0.8.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Adapter: ${agent.executionResponse.adapterId} (${agent.executionResponse.implementationClass.substringAfterLast('.')})",
+                                        fontSize = 11.sp,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Endpoint: [${agent.executionResponse.httpMethod}] ${agent.executionResponse.requestUrl}",
+                                        fontSize = 10.sp,
+                                        color = TextSecondary,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        text = "Status: HTTP ${agent.executionResponse.statusCode} • ${agent.executionResponse.responseByteCount} bytes • ${agent.executionResponse.latencyMs}ms",
+                                        fontSize = 10.sp,
+                                        color = if (agent.executionResponse.statusCode in 200..299) MintSecondary else Color(0xFFFF5376),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    if (agent.executionResponse.sha256Digest.isNotBlank()) {
+                                        Text(
+                                            text = "SHA-256: ${agent.executionResponse.sha256Digest}",
+                                            fontSize = 9.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = TextMuted,
+                                            maxLines = 1
+                                        )
                                     }
                                 }
                             }

@@ -40,22 +40,41 @@ object PipelineExportHelper {
             appendLine("------------------------------------------------------------")
             appendLine("1. QUALITY DIRECTOR OUTCOME AUDIT")
             appendLine("------------------------------------------------------------")
-            appendLine("Status        : VERIFIED & CERTIFIED")
+            val statusLabel = when (pipeline.verificationResult.state) {
+                com.example.model.VerificationState.VERIFIED -> "VERIFIED & CERTIFIED"
+                com.example.model.VerificationState.FAILED -> "FAILED (INTEGRITY DEFECTS DETECTED)"
+                com.example.model.VerificationState.REJECTED -> "REJECTED (FAILED CRITERIA)"
+                com.example.model.VerificationState.AUDITING -> "AUDITING IN PROGRESS"
+                com.example.model.VerificationState.PENDING -> "PENDING VERIFICATION"
+            }
+            appendLine("Audit State   : $statusLabel")
+            appendLine("Certified     : ${if (pipeline.verificationResult.isVerified) "YES (Cryptographically Verified)" else "NO"}")
             val totalDurationMs = pipeline.agents.sumOf { it.executionTimeMs }.let { if (it > 0) it else 4200L }
             val completedMilestones = pipeline.agents.count { it.status == com.example.model.AgentStatus.COMPLETED }
-            appendLine("Quality Score : ${pipeline.verificationResult.qualityScorePercent}% MATCH")
+            appendLine("Evidence Score: ${pipeline.verificationResult.qualityScorePercent}% (Empirical Check Ratio)")
             appendLine("Duration      : ${totalDurationMs}ms")
             appendLine("Milestones Met: $completedMilestones / ${pipeline.agents.size}")
+            appendLine("Unique Evidence Hashes: ${pipeline.verificationResult.uniqueEvidenceCount}")
+            if (pipeline.verificationResult.duplicateEvidenceDetected > 0) {
+                appendLine("Duplicate Hashes Flagged: ${pipeline.verificationResult.duplicateEvidenceDetected}")
+            }
             appendLine()
+
+            if (pipeline.verificationResult.failedChecks.isNotEmpty()) {
+                appendLine("Integrity Failures Detected:")
+                pipeline.verificationResult.failedChecks.forEach { check ->
+                    appendLine("  [✗] $check")
+                }
+                appendLine()
+            }
+
             appendLine("Verification Checkpoints Passed:")
             if (pipeline.verificationResult.passedChecks.isNotEmpty()) {
                 pipeline.verificationResult.passedChecks.forEach { check ->
                     appendLine("  [✓] $check")
                 }
             } else {
-                appendLine("  [✓] Deterministic outcome verified against objective constraints")
-                appendLine("  [✓] Zero unvetted tools or simulated hallucinations")
-                appendLine("  [✓] Payload structural integrity confirmed")
+                appendLine("  (No passed checkpoints recorded)")
             }
             appendLine()
 
@@ -66,14 +85,22 @@ object PipelineExportHelper {
             appendLine()
 
             appendLine("------------------------------------------------------------")
-            appendLine("3. HIERARCHICAL AGENT WORKFORCE & TOOL CHAIN")
+            appendLine("3. HIERARCHICAL AGENT WORKFORCE & EXECUTION TELEMETRY")
             appendLine("------------------------------------------------------------")
             pipeline.agents.forEachIndexed { index, agent ->
                 appendLine("${index + 1}. [${agent.roleTitle}] ${agent.name}")
                 appendLine("   Tool Utilized   : ${agent.tool.name} (${agent.tool.category})")
-                appendLine("   Web Tool Endpoint: ${agent.tool.url}")
-                appendLine("   Tool Purpose    : ${agent.tool.description}")
                 appendLine("   Execution Status: ${agent.status.name}")
+                if (agent.executionResponse != null) {
+                    val resp = agent.executionResponse
+                    appendLine("   Adapter ID      : ${resp.adapterId}")
+                    appendLine("   Adapter Class   : ${resp.implementationClass}")
+                    appendLine("   Request Endpoint: [${resp.httpMethod}] ${resp.requestUrl}")
+                    appendLine("   HTTP Status     : ${resp.statusCode} (${resp.latencyMs}ms)")
+                    appendLine("   Payload Bytes   : ${resp.responseByteCount} bytes")
+                    appendLine("   SHA-256 Digest  : ${resp.sha256Digest}")
+                    appendLine("   Artifact URI    : ${resp.artifactLocation}")
+                }
                 if (agent.outputArtifactTitle.isNotEmpty()) {
                     appendLine("   Output Artifact : ${agent.outputArtifactTitle}")
                 }
@@ -87,13 +114,19 @@ object PipelineExportHelper {
             }
 
             appendLine("------------------------------------------------------------")
-            appendLine("4. DELIVERABLE ARTIFACT DETAILS")
+            appendLine("4. DELIVERABLE ARTIFACT DETAILS & AUDIT LOG")
             appendLine("------------------------------------------------------------")
             pipeline.agents.forEach { agent ->
                 if (agent.outputArtifactTitle.isNotEmpty()) {
                     appendLine("### Artifact: ${agent.outputArtifactTitle}")
                     appendLine("Agent : ${agent.name} (${agent.roleTitle})")
                     appendLine("Tool  : ${agent.tool.name}")
+                    if (agent.validationResult != null) {
+                        appendLine("Integrity Audit : ${if (agent.validationResult.isValid) "VALIDATED (PASS)" else "REJECTED (FAIL)"}")
+                        appendLine("SHA-256 Hash    : ${agent.validationResult.sha256Checksum}")
+                        appendLine("Artifact Size   : ${agent.validationResult.byteSize} bytes")
+                        appendLine("Audit Notes     : ${agent.validationResult.validationNotes}")
+                    }
                     if (agent.outputArtifactData.isNotEmpty()) {
                         appendLine("Payload Preview / Content:")
                         appendLine(agent.outputArtifactData)

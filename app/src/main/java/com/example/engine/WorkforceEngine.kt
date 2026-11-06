@@ -11,6 +11,7 @@ import com.example.model.FreeTool
 import com.example.model.LogLevel
 import com.example.model.OperatingDivision
 import com.example.model.OutcomeVerificationResult
+import com.example.model.VerificationState
 import com.example.engine.adapter.ToolExecutionRegistry
 import com.example.engine.resolver.CompatibleFallbackResolver
 import com.example.engine.validation.ArtifactValidator
@@ -734,38 +735,90 @@ class WorkforceEngine {
         }
 
         // 7. Evidence-based Quality Director Outcome Verification
-        val totalArtifacts = validationResults.size
-        val avgScore = if (validationResults.isNotEmpty()) {
-            validationResults.map { it.qualityScore }.average().toInt()
+        // Inspects actual agent artifacts, validates independent reproducibility, and audits checksums.
+        val allPassedChecks = mutableListOf<String>()
+        val allFailedChecks = mutableListOf<String>()
+        var duplicateEvidenceCount = 0
+
+        val seenChecksums = mutableSetOf<String>()
+        for (agent in current.agents) {
+            val vResult = agent.validationResult
+            if (vResult == null || agent.status == AgentStatus.FAILED || !vResult.isValid) {
+                val failReason = vResult?.failedChecks?.firstOrNull() ?: "Agent ${agent.name} failed task execution (${agent.status.name})"
+                allFailedChecks.add("Agent Failure [${agent.name}]: $failReason")
+            } else {
+                // Check for duplicate evidence across distinct agents
+                val checksum = vResult.sha256Checksum
+                if (checksum.isNotBlank()) {
+                    if (seenChecksums.contains(checksum)) {
+                        duplicateEvidenceCount++
+                        allFailedChecks.add("Duplicate Evidence Flagged: Checksum ${checksum.take(16)}... repeated across multiple agents")
+                    } else {
+                        seenChecksums.add(checksum)
+                    }
+                }
+                allPassedChecks.addAll(vResult.passedChecks)
+                if (vResult.failedChecks.isNotEmpty()) {
+                    allFailedChecks.addAll(vResult.failedChecks)
+                }
+            }
+        }
+
+        val distinctPassed = allPassedChecks.distinct()
+        val distinctFailed = allFailedChecks.distinct()
+        val totalEvidenceChecks = distinctPassed.size + distinctFailed.size
+
+        val allAgentsPassed = current.agents.all { it.status == AgentStatus.COMPLETED && it.validationResult?.isValid == true }
+        val hasIntegrityFailures = distinctFailed.isNotEmpty() || !allAgentsPassed
+
+        val verificationState = when {
+            hasIntegrityFailures -> VerificationState.FAILED
+            distinctPassed.isNotEmpty() -> VerificationState.VERIFIED
+            else -> VerificationState.REJECTED
+        }
+
+        // Quality score: strictly computed from empirical checks, never hardcoded!
+        val computedScore = if (!hasIntegrityFailures && totalEvidenceChecks > 0) {
+            ((distinctPassed.size.toDouble() / totalEvidenceChecks) * 100).toInt().coerceIn(60, 100)
+        } else if (totalEvidenceChecks > 0) {
+            // Strictly cap below passing grade (0-49%) if any check or agent failed
+            ((distinctPassed.size.toDouble() / totalEvidenceChecks) * 45).toInt().coerceIn(0, 49)
         } else {
             0
         }
-        val allValid = validationResults.all { it.isValid }
-        val allCheckpoints = validationResults.flatMap { it.passedChecks }.distinct()
+
+        val isCertified = (verificationState == VerificationState.VERIFIED) && (computedScore >= 60)
 
         val verification = OutcomeVerificationResult(
-            isVerified = allValid && avgScore >= 60,
-            qualityScorePercent = avgScore,
-            verifiedBy = "Quality Director (Evidence-Based Integrity Engine)",
-            auditSummary = "Certified $totalArtifacts deliverables across ${current.primaryDivision.title}. Validated with cryptographic SHA-256 checksums, response schemas, and capability-matched fallbacks.",
-            passedChecks = allCheckpoints.ifEmpty {
-                listOf(
-                    "Objective alignment: Verified by division directors",
-                    "Tool capability status: Verified live adapters",
-                    "Cryptographic integrity: SHA-256 digests validated"
-                )
+            state = verificationState,
+            isVerified = isCertified,
+            qualityScorePercent = computedScore,
+            verifiedBy = "Quality Director (Independent Verification Engine)",
+            auditSummary = if (isCertified) {
+                "Certified ${validationResults.size} deliverables across ${current.primaryDivision.title}. Validated with independent cryptographic SHA-256 digests, syntax models, and zero unhandled failovers."
+            } else {
+                "Audit Rejected by Quality Director: ${distinctFailed.size} integrity failure(s) detected. Deliverables not certified."
             },
+            passedChecks = distinctPassed,
+            failedChecks = distinctFailed,
             validationResults = validationResults,
-            totalArtifactsValidated = totalArtifacts,
-            averageChecksum = validationResults.map { it.sha256Checksum }.filter { it.isNotEmpty() }.joinToString(", ").take(64)
+            totalArtifactsValidated = validationResults.size,
+            averageChecksum = validationResults.map { it.sha256Checksum }.filter { it.isNotEmpty() }.distinct().joinToString(", ").take(64),
+            uniqueEvidenceCount = seenChecksums.size,
+            duplicateEvidenceDetected = duplicateEvidenceCount,
+            rejectionReason = if (!isCertified) distinctFailed.firstOrNull() ?: "Integrity threshold not met" else null
         )
 
         val completed = current.copy(
-            overallStatus = if (allValid) AgentStatus.COMPLETED else AgentStatus.FAILED,
+            overallStatus = if (isCertified) AgentStatus.COMPLETED else AgentStatus.FAILED,
             overallProgress = 1.0f,
             activeApprovalGate = null,
             verificationResult = verification,
-            finalOutputSummary = "Mission accomplished by ${current.primaryDivision.title}. Orchestrated ${total} agents across hierarchical directors and specialist subteams. Verified $totalArtifacts live deliverables with average evidence score of $avgScore%."
+            finalOutputSummary = if (isCertified) {
+                "Mission accomplished by ${current.primaryDivision.title}. Orchestrated ${total} agents across hierarchical directors and specialist subteams. Verified ${validationResults.size} live deliverables with empirical evidence score of $computedScore%."
+            } else {
+                "Mission execution failed or rejected during Quality Director audit: ${distinctFailed.firstOrNull() ?: "Deliverables failed integrity criteria"}"
+            }
         )
 
         onUpdate(completed)

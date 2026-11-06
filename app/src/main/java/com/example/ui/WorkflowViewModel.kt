@@ -22,6 +22,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import com.example.model.AppSettings
+import com.example.model.DisplayMode
+import com.example.model.FeedbackCategory
+import com.example.model.FeedbackSubmission
+
 enum class NavigationTab {
     HOME,
     GRAPH,
@@ -45,6 +50,12 @@ data class WorkflowUiState(
     val isExecuting: Boolean = false,
     val showOutputSheet: Boolean = false,
     val showStandaloneInfoDialog: Boolean = false,
+    val showSettingsDialog: Boolean = false,
+    val showFeedbackDialog: Boolean = false,
+    val displayMode: DisplayMode = DisplayMode.MOBILE,
+    val isFullscreen: Boolean = false,
+    val settings: AppSettings = AppSettings(),
+    val submittedFeedbackList: List<FeedbackSubmission> = emptyList(),
     val infoMessage: String? = null
 )
 
@@ -98,6 +109,84 @@ class WorkflowViewModel(application: Application) : AndroidViewModel(application
     fun clearInfoMessage() {
         _uiState.update { it.copy(infoMessage = null) }
     }
+
+    fun setDisplayMode(mode: DisplayMode) {
+        _uiState.update {
+            it.copy(
+                displayMode = mode,
+                settings = it.settings.copy(displayMode = mode),
+                infoMessage = "Switched to ${mode.label}"
+            )
+        }
+    }
+
+    fun toggleDisplayMode() {
+        val next = if (_uiState.value.displayMode == DisplayMode.MOBILE) DisplayMode.DESKTOP else DisplayMode.MOBILE
+        setDisplayMode(next)
+    }
+
+    fun setFullscreen(fullscreen: Boolean) {
+        _uiState.update {
+            it.copy(
+                isFullscreen = fullscreen,
+                settings = it.settings.copy(isFullscreen = fullscreen),
+                infoMessage = if (fullscreen) "Entered Full Screen mode" else "Exited Full Screen mode"
+            )
+        }
+    }
+
+    fun toggleFullscreen() {
+        setFullscreen(!_uiState.value.isFullscreen)
+    }
+
+    fun setShowSettingsDialog(show: Boolean) {
+        _uiState.update { it.copy(showSettingsDialog = show) }
+    }
+
+    fun setShowFeedbackDialog(show: Boolean) {
+        _uiState.update { it.copy(showFeedbackDialog = show) }
+    }
+
+    fun updateSettings(newSettings: AppSettings) {
+        _uiState.update {
+            it.copy(
+                settings = newSettings,
+                displayMode = newSettings.displayMode,
+                isFullscreen = newSettings.isFullscreen,
+                infoMessage = "Settings saved."
+            )
+        }
+    }
+
+    fun submitFeedback(
+        category: FeedbackCategory,
+        rating: Int,
+        title: String,
+        message: String,
+        includeDiagnostics: Boolean = true
+    ): FeedbackSubmission {
+        val diagnostics = if (includeDiagnostics) {
+            "OS: Android API ${android.os.Build.VERSION.SDK_INT} | Device: ${android.os.Build.MODEL} | OmniSwarm v11.0 | Division: ${_uiState.value.selectedDivision.name} | Viewport: ${_uiState.value.displayMode.name}"
+        } else ""
+
+        val submission = FeedbackSubmission(
+            category = category,
+            rating = rating,
+            title = title.ifBlank { "OmniSwarm Feedback" },
+            message = message,
+            includeDiagnostics = includeDiagnostics,
+            diagnosticDetails = diagnostics
+        )
+
+        _uiState.update { state ->
+            state.copy(
+                submittedFeedbackList = listOf(submission) + state.submittedFeedbackList,
+                infoMessage = "Thank you! Feedback #${submission.id} logged to QA registry."
+            )
+        }
+        return submission
+    }
+
 
     fun searchTools(query: String) {
         val filtered = FreeToolCatalog.searchTools(query)
